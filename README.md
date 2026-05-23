@@ -1,7 +1,3 @@
-md
-
-note_add
-ویرایش با Canvas
 # 🚀 RingoGPT
 
 RingoGPT is a lightweight command-line tool that converts natural language requests into Linux shell commands using GPT.
