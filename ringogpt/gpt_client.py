@@ -2,7 +2,7 @@ from openai import OpenAI
 import json
 import re
 
-from .config import API_KEY, BASE_URL, MODEL
+from .config import API_KEY, BASE_URL, MODEL, DEBUG
 
 
 class RingoGPTError(RuntimeError):
@@ -62,14 +62,33 @@ JSON schema:
 """.strip()
 
 
+JSON_RETRY_PROMPT = """
+Your previous response was not valid JSON.
+
+Return ONLY a valid JSON object with exactly these keys:
+{
+  "command": "...",
+  "explanation": "...",
+  "danger": "low | medium | high"
+}
+
+Do not include markdown.
+Do not include code fences.
+Do not include any text before or after the JSON.
+""".strip()
+
+
+PLACEHOLDER_KEYS = {
+    "your_api_key_here",
+    "your_gapgpt_api_key_here",
+    "your_openrouter_api_key_here",
+    "your_gemini_api_key_here",
+    "your_groq_api_key_here",
+}
+
+
 def _get_client():
-    if not API_KEY or API_KEY.strip() in {
-        "your_api_key_here",
-        "your_gapgpt_api_key_here",
-        "your_openrouter_api_key_here",
-        "your_gemini_api_key_here",
-        "your_groq_api_key_here",
-    }:
+    if not API_KEY or API_KEY.strip() in PLACEHOLDER_KEYS:
         raise RingoGPTError(
             "Missing or placeholder API key. Set a real RINGOGPT_API_KEY in your environment or .env file."
         )
@@ -129,6 +148,45 @@ def _normalize_result(data):
     }
 
 
+def _create_completion(client, messages, use_json_mode=True):
+    payload = {
+        "model": MODEL,
+        "temperature": 0.1,
+        "messages": messages,
+    }
+
+    if use_json_mode:
+        payload["response_format"] = {"type": "json_object"}
+
+    try:
+        return client.chat.completions.create(**payload)
+    except Exception as first_exc:
+        # Some OpenAI-compatible providers or free models may not support JSON mode.
+        # Fall back to a normal chat completion request.
+        if use_json_mode:
+            payload.pop("response_format", None)
+            try:
+                return client.chat.completions.create(**payload)
+            except Exception as second_exc:
+                raise RingoGPTError(f"API request failed: {second_exc}") from second_exc
+
+        raise RingoGPTError(f"API request failed: {first_exc}") from first_exc
+
+
+def _get_response_text(response):
+    try:
+        return response.choices[0].message.content or ""
+    except Exception as exc:
+        raise RingoGPTError(f"Unexpected API response format: {exc}") from exc
+
+
+def _debug_response(label, text):
+    if DEBUG:
+        print(f"\n--- {label} raw model response ---")
+        print(text)
+        print("--- end raw model response ---\n")
+
+
 def ask_command(question):
     question = question.strip()
 
@@ -137,22 +195,36 @@ def ask_command(question):
 
     client = _get_client()
 
-    try:
-        response = client.chat.completions.create(
-            model=MODEL,
-            temperature=0.1,
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": question},
-            ],
-        )
-    except Exception as exc:
-        raise RingoGPTError(f"API request failed: {exc}") from exc
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": question},
+    ]
+
+    response = _create_completion(client, messages, use_json_mode=True)
+    text = _get_response_text(response)
+    _debug_response("first", text)
 
     try:
-        text = response.choices[0].message.content or ""
-    except Exception as exc:
-        raise RingoGPTError(f"Unexpected API response format: {exc}") from exc
+        data = _extract_json(text)
+        return _normalize_result(data)
+    except RingoGPTError:
+        # One retry for models that ignored the JSON-only instruction.
+        retry_messages = messages + [
+            {"role": "assistant", "content": text},
+            {"role": "user", "content": JSON_RETRY_PROMPT},
+        ]
 
-    data = _extract_json(text)
-    return _normalize_result(data)
+        retry_response = _create_completion(client, retry_messages, use_json_mode=True)
+        retry_text = _get_response_text(retry_response)
+        _debug_response("retry", retry_text)
+
+        try:
+            data = _extract_json(retry_text)
+            return _normalize_result(data)
+        except RingoGPTError as exc:
+            if DEBUG:
+                raise RingoGPTError(
+                    f"{exc}\n\nFirst raw response:\n{text}\n\nRetry raw response:\n{retry_text}"
+                ) from exc
+
+            raise
