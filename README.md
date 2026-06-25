@@ -195,6 +195,79 @@ Do not commit your `.env` file.
 
 ---
 
+
+## Global usage with pipx
+
+If you want to use RingoGPT from anywhere in your terminal, install it with `pipx`.
+
+```bash
+sudo apt update
+sudo apt install -y pipx
+pipx ensurepath
+```
+
+Restart your terminal, then install RingoGPT:
+
+```bash
+cd RingoGPT
+pipx install .
+```
+
+After that, these commands should be available globally:
+
+```bash
+ringogpt "show hidden files"
+soal "show hidden files"
+```
+
+---
+
+## Global configuration file
+
+For global usage, RingoGPT can read configuration from:
+
+```text
+~/.config/ringogpt/.env
+```
+
+Create it:
+
+```bash
+mkdir -p ~/.config/ringogpt
+nano ~/.config/ringogpt/.env
+```
+
+Example:
+
+```env
+RINGOGPT_API_KEY=your_api_key_here
+RINGOGPT_BASE_URL=https://openrouter.ai/api/v1
+RINGOGPT_MODEL=openrouter/free
+RINGOGPT_CACHE_FILE=~/.ringogpt_cache.json
+RINGOGPT_TIMEOUT=30
+RINGOGPT_DEBUG=false
+```
+
+Protect the file:
+
+```bash
+chmod 600 ~/.config/ringogpt/.env
+```
+
+RingoGPT loads configuration from these places:
+
+```text
+1. ~/.config/ringogpt/.env
+2. ~/.ringogpt.env
+3. .env in the current working directory
+4. real shell environment variables
+```
+
+Shell environment variables have the highest priority.
+
+This means beginners do not need to edit `.zshrc` or `.bashrc`. They can use a normal config file instead.
+
+
 ## Free or low-cost API options
 
 RingoGPT does not include a shared API key.
