@@ -1,253 +1,315 @@
-md
+# RingoGPT
 
-note_add
-ویرایش با Canvas
-# 🚀 RingoGPT
+A lightweight AI-powered CLI assistant that converts natural language into Linux shell commands.
 
-RingoGPT is a lightweight command-line tool that converts natural language requests into Linux shell commands using GPT.
+RingoGPT lets you ask for terminal commands in plain English or Persian, reviews the command with an explanation and risk level, and only runs it after your confirmation.
 
-It helps you quickly generate commands, review them safely, and optionally execute them after your confirmation.
+> Built for people who use Linux often, but do not want to memorize every command.
 
 ---
 
-## ✨ Features
+## What it does
 
-- 🗣️ Convert natural language into Linux commands  
-- 🔒 JSON-only model responses for safer parsing  
-- 💾 Local caching to avoid repeated API calls  
-- 🖥️ Interactive CLI for reviewing commands before execution  
-- 🌐 Configurable OpenAI-compatible API endpoint  
-- 🧩 Simple and lightweight project structure  
+Instead of searching for a command manually, you can ask:
 
----
-
-## 📁 Project Structure
-
-```text
-ringogpt/
-├── cli.py           # Command-line interface, input/output handling
-├── gpt_client.py    # GPT API client, JSON parsing
-├── cache.py         # Local cache management
-├── config.py        # Configuration (API key, URL, model)
-├── README.md        # This documentation
-└── ...
+```bash
+ringogpt "show hidden files in the current directory"
 ```
 
-## ⚙️ Requirements
-- Python 3.9 or newer
-- Valid API key
-- Required Python packages (installed during setup)
+or:
 
+```bash
+soal "find all .log files in this folder"
+```
 
-## 🛠️ Installation
+RingoGPT returns:
 
+```text
+Command:
+find . -name "*.log"
 
-1. Clone the repo:
+Explanation:
+This command searches the current directory and all subdirectories for files ending in .log.
 
-``` bash
-git clone https://github.com/USERNAME/ringogpt.git
+Danger: LOW
+
+Run command? (y/N):
+```
+
+---
+
+## Features
+
+* Convert natural language into Linux shell commands
+* Works with English and Persian requests
+* Shows the generated command before running it
+* Explains what the command does
+* Classifies command risk as low, medium, or high
+* Requires confirmation before execution
+* Uses stricter confirmation for high-risk commands
+* Supports local response caching
+* Supports OpenAI-compatible API providers
+* Lightweight Python package with simple CLI commands
+
+---
+
+## Safety-first behavior
+
+RingoGPT does **not** silently execute generated commands.
+
+Every generated command is shown first with:
+
+* the command
+* an explanation
+* a danger level
+* a confirmation prompt
+
+For high-risk commands, RingoGPT requires stronger confirmation.
+
+Example high-risk categories include:
+
+* deleting files
+* changing permissions recursively
+* formatting disks
+* shutting down or rebooting
+* modifying system files
+
+Even with these protections, always review commands before running them.
+
+---
+
+## Installation
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/amir-homous/ringogpt.git
 cd ringogpt
-``` 
+```
 
-
-2.	Create and activate a virtual environment:
-3. Clone the repo:
-Linux / macOS:
-
+### 2. Create a virtual environment
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-Windows:
 ```
 
-content_copy
-bash
+### 3. Install dependencies
 
-note_add
-ویرایش با Canvas
-python -m venv .venv
-.venv\Scripts\activate
-Install the project
+```bash
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
 
-content_copy
-bash
+### 4. Install RingoGPT locally
 
-note_add
-ویرایش با Canvas
-pip install -e .
-🔧 Configuration
-Settings are read from config.py.
+```bash
+python -m pip install -e .
+```
 
-API key must be set as an environment variable, e.g.:
+After installation, both commands should work:
 
-content_copy
-bash
+```bash
+ringogpt "list files in current directory"
+```
 
-note_add
-ویرایش با Canvas
-export RINGOGPT_API_KEY="your_api_key_here"
-Base URL:
-
-content_copy
-python
-
-note_add
-ویرایش با Canvas
-https://api.gapgpt.app/v1
-Model:
-
-content_copy
-python
-
-note_add
-ویرایش با Canvas
-gpt-4o
-You may create a .env file by copying .env.example:
-
-
-content_copy
-bash
-
-note_add
-ویرایش با Canvas
-cp .env.example .env
-and then edit it to add your key.
-
-🚀 Usage
-Run the CLI with a natural language request:
-
-
-content_copy
-bash
-
-note_add
-ویرایش با Canvas
-soal "list files in the current directory"
-Example:
-
-
-content_copy
-bash
-
-note_add
-ویرایش با Canvas
-soal "show hidden files only"
-⚙️ How It Works
-User input: cli.py reads your natural language request.
-Cache lookup: Checks if the prompt response exists locally.
-Model request: If no cached result, gpt_client.py calls GPT API.
-JSON parsing: Parses JSON with:
-
-content_copy
-json
-
-note_add
-ویرایش با Canvas
-{
-  "command": "...",
-  "explanation": "...",
-  "danger": "LOW|MEDIUM|HIGH"
-}
-User confirmation: Shows command and explanation, asks to approve.
-Execution: If approved, runs command via shell.
-💾 Cache Behavior
-Stores previous responses locally for speed and API usage reduction.
-cache.py manages reading/writing JSON cache files.
-⚠️ Safety Notes
-Always review commands before running!
-Avoid running unknown or destructive commands like rm -rf, chmod, dd, etc.
-Model output must be valid JSON, else parsing fails.
-🔍 Example Workflow
-
-content_copy
-bash
-
-note_add
-ویرایش با Canvas
-soal "find all .log files in the current directory"
-Output example:
-
-
-content_copy
-text
-
-note_add
-ویرایش با Canvas
-Command: find . -name "*.log"
-Explanation: This command searches for .log files recursively.
-Danger: LOW
-
-Run this command? [y/N]:
-🛠️ Development
-Adjust prompts or parsing in gpt_client.py
-Modify CLI logic in cli.py
-Improve cache code in cache.py
-Update settings in config.py
-❓ Troubleshooting
-soal command not found:
-
-Check $PATH. Add if needed (example for bash):
-
-
-content_copy
-bash
-
-note_add
-ویرایش با Canvas
-echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
-source ~/.bashrc
-JSON Parse errors:
-
-Ensure model returns JSON only.
-Enable debug if available.
-Clear corrupted cache entries.
-API Key issues:
-
-Verify RINGOGPT_API_KEY is correctly set and has access.
-🎯 Project Philosophy
-Minimal and clean code
-Lightweight dependencies
-Safe default CLI flow
-Efficient local caching
-🙌 Contributing
-Improve prompts, error handling, caching
-Add tests and polish CLI output
-Suggested workflow:
-
-Fork
-Branch
-Code
-Test
-Pull request
-📜 License
-MIT License
-
-❓ FAQ
-Is it safe?
-
-Shows command first; you must approve before running.
-
-Can I change the model?
-
-Yes, configure in config.py.
-
-Is caching enabled?
-
-Yes, responses are cached locally.
-
-What if model output is invalid?
-
-Parsing fails; check prompt instructions.
-
-✒️ Author
-[ homous ] Amir
-
-⚠️ Disclaimer
-The tool generates shell commands that can affect your system. Use it responsibly by reviewing commands before execution.
-
-
-content_copy
-text
+```bash
+soal "list files in current directory"
+```
 
 ---
+
+## Configuration
+
+RingoGPT reads configuration from environment variables or a `.env` file.
+
+Create a `.env` file:
+
+```bash
+cp .env.example .env
+```
+
+Then edit it:
+
+```bash
+nano .env
+```
+
+Example:
+
+```env
+RINGOGPT_API_KEY=your_api_key_here
+RINGOGPT_BASE_URL=https://api.openai.com/v1
+RINGOGPT_MODEL=gpt-4o-mini
+RINGOGPT_CACHE_FILE=~/.ringogpt_cache.json
+```
+
+---
+
+## API providers
+
+RingoGPT is designed to work with OpenAI-compatible API providers.
+
+You can use providers such as:
+
+* OpenAI
+* OpenRouter
+* Groq
+* Gemini OpenAI-compatible endpoint
+* GapGPT or other compatible providers
+* Any custom OpenAI-compatible endpoint
+
+Example OpenRouter configuration:
+
+```env
+RINGOGPT_API_KEY=your_openrouter_api_key_here
+RINGOGPT_BASE_URL=https://openrouter.ai/api/v1
+RINGOGPT_MODEL=your_model_slug_here
+```
+
+Example Groq configuration:
+
+```env
+RINGOGPT_API_KEY=your_groq_api_key_here
+RINGOGPT_BASE_URL=https://api.groq.com/openai/v1
+RINGOGPT_MODEL=your_model_slug_here
+```
+
+Example custom provider:
+
+```env
+RINGOGPT_API_KEY=your_api_key_here
+RINGOGPT_BASE_URL=https://your-provider.example.com/v1
+RINGOGPT_MODEL=your-model-name
+```
+
+Do not commit your `.env` file.
+
+---
+
+## Usage
+
+Basic command:
+
+```bash
+ringogpt "show hidden files"
+```
+
+Persian example:
+
+```bash
+soal "فایل های مخفی این پوشه رو نشون بده"
+```
+
+Another example:
+
+```bash
+ringogpt "find large files bigger than 100MB"
+```
+
+RingoGPT will show the command, explanation, and risk level before asking whether to run it.
+
+---
+
+## Cache
+
+RingoGPT stores previous responses in a local cache file to reduce repeated API requests.
+
+Default cache path:
+
+```text
+~/.ringogpt_cache.json
+```
+
+You can change it:
+
+```env
+RINGOGPT_CACHE_FILE=~/.cache/ringogpt/cache.json
+```
+
+---
+
+## Project structure
+
+```text
+ringogpt/
+├── cli.py           # CLI entry point and command execution flow
+├── gpt_client.py    # AI provider client, prompt, JSON parsing, validation
+├── cache.py         # Local cache loading and saving
+├── config.py        # Environment-based configuration
+├── utils.py         # Terminal color helpers
+└── __init__.py
+```
+
+---
+
+## Development
+
+Install locally in editable mode:
+
+```bash
+python -m pip install -e .
+```
+
+Run a syntax check:
+
+```bash
+python -m compileall ringogpt
+```
+
+Check Git status:
+
+```bash
+git status --short
+```
+
+---
+
+## Roadmap
+
+Planned improvements:
+
+* Add `--no-execute` mode
+* Add `--no-cache` option
+* Add `--clear-cache`
+* Add safer command pattern detection
+* Add test suite
+* Add provider presets
+* Add better shell detection
+* Add command history
+* Add dry-run mode
+* Improve Persian output formatting
+
+---
+
+## Why I built this
+
+I built RingoGPT because I often know what I want to do in Linux, but I do not always remember the exact command.
+
+The goal is not to replace learning Linux.
+
+The goal is to make the command line easier, safer, and faster for everyday tasks.
+
+---
+
+## Author
+
+Created by Amir Hossein Mousavi — Homous
+
+Creative Technologist & Visual Problem Solver
+
+---
+
+## License
+
+MIT License
+
+---
+
+## Disclaimer
+
+RingoGPT generates shell commands using AI.
+
+AI-generated commands can be wrong, incomplete, or dangerous.
+
+Always review commands before running them. You are responsible for what you execute on your system.
