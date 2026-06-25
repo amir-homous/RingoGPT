@@ -4,6 +4,7 @@ import subprocess
 from .gpt_client import ask_command, RingoGPTError
 from .cache import load_cache, save_cache
 from .utils import green, red, yellow
+from .config import COMMAND_TIMEOUT
 
 
 def _print_usage():
@@ -81,8 +82,12 @@ def main():
     if _confirm_execution(danger):
         print()
         print(yellow("Running command..."))
-        completed = subprocess.run(command, shell=True)
-        return completed.returncode
+        try:
+            completed = subprocess.run(command, shell=True, timeout=COMMAND_TIMEOUT)
+            return completed.returncode
+        except subprocess.TimeoutExpired:
+            print(red(f"Command timed out after {COMMAND_TIMEOUT} seconds."))
+            return 1
 
     print("Command not executed.")
     return 0
