@@ -1,32 +1,72 @@
 import sys
 import subprocess
-from .gpt_client import ask_command
+
+from .gpt_client import ask_command, RingoGPTError
 from .cache import load_cache, save_cache
 from .utils import green, red, yellow
+from .config import COMMAND_TIMEOUT
+
+
+def _print_usage():
+    print('Usage: ringogpt "your request"')
+    print('   or: soal "your request"')
+
+
+def _print_danger(danger):
+    if danger == "high":
+        print(red("Danger: HIGH"))
+    elif danger == "medium":
+        print(yellow("Danger: MEDIUM"))
+    else:
+        print(green("Danger: LOW"))
+
+
+def _confirm_execution(danger):
+    if danger == "high":
+        print()
+        print(red("This command is marked as HIGH risk."))
+        print(red('Type "RUN" exactly if you still want to execute it.'))
+        return input("Confirm: ").strip() == "RUN"
+
+    answer = input("Run command? (y/N): ").strip().lower()
+    return answer == "y"
 
 
 def main():
-
     if len(sys.argv) < 2:
-        print('Usage: ringogpt "your request"')
-        return
+        _print_usage()
+        return 1
 
-    question = " ".join(sys.argv[1:])
+    question = " ".join(sys.argv[1:]).strip()
+
+    if not question:
+        _print_usage()
+        return 1
 
     cache = load_cache()
 
-    if question in cache:
-        result = cache[question]
-        print("(cached result)\n")
-    else:
-        print("Asking RingoGPT...\n")
-        result = ask_command(question)
-        cache[question] = result
-        save_cache(cache)
+    try:
+        if question in cache:
+            result = cache[question]
+            print("(cached result)\n")
+        else:
+            print("Asking RingoGPT...\n")
+            result = ask_command(question)
+            cache[question] = result
+            save_cache(cache)
 
-    command = result["command"]
-    explanation = result["explanation"]
-    danger = result["danger"]
+        command = result["command"]
+        explanation = result["explanation"]
+        danger = result["danger"]
+
+    except RingoGPTError as exc:
+        print(red("RingoGPT error:"))
+        print(exc)
+        return 1
+    except Exception as exc:
+        print(red("Unexpected error:"))
+        print(exc)
+        return 1
 
     print(green("Command:"))
     print(command)
@@ -36,16 +76,22 @@ def main():
     print(explanation)
     print()
 
-    if danger == "high":
-        print(red("Danger: HIGH"))
-    elif danger == "medium":
-        print(yellow("Danger: MEDIUM"))
-    else:
-        print(green("Danger: LOW"))
-
+    _print_danger(danger)
     print()
 
-    run = input("Run command? (y/n): ")
+    if _confirm_execution(danger):
+        print()
+        print(yellow("Running command..."))
+        try:
+            completed = subprocess.run(command, shell=True, timeout=COMMAND_TIMEOUT)
+            return completed.returncode
+        except subprocess.TimeoutExpired:
+            print(red(f"Command timed out after {COMMAND_TIMEOUT} seconds."))
+            return 1
 
-    if run.lower() == "y":
-        subprocess.run(command, shell=True)
+    print("Command not executed.")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
